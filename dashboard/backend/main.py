@@ -390,9 +390,6 @@ async def serve_frontend():
     })
 
 
-
-
-
 @app.get("/assets/{path:path}")
 async def serve_assets(path: str):
     """Serve frontend assets."""
