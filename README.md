@@ -88,7 +88,25 @@ A full-stack, real-time server monitoring solution built with **FastAPI**, **Rea
 
 ## 📸 Screenshots
 
-> The dashboard features a sleek dark theme with real-time charts, server cards with status indicators, and a comprehensive settings panel.
+### Dashboard Overview
+Server grid with real-time status cards showing CPU, memory, disk, and network metrics at a glance.
+
+![Dashboard](docs/screenshots/dashboard.png)
+
+### Server Detail
+Drill into any server for detailed charts, process management, and remote commands.
+
+![Server Detail](docs/screenshots/server-detail.png)
+
+### Activity Feed
+Real-time event log tracking server connections, disconnections, and status changes.
+
+![Activity](docs/screenshots/activity.png)
+
+### Settings
+Fully configurable dashboard with dark/light themes, compact mode, temperature units, and notification preferences.
+
+![Settings](docs/screenshots/settings.png)
 
 ---
 

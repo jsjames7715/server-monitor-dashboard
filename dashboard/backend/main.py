@@ -390,12 +390,7 @@ async def serve_frontend():
     })
 
 
-@app.get("/settings")
-async def get_settings():
-    """Get dashboard settings."""
-    return {
-        "metricsHistoryLimit": 100  # Default, frontend can override
-    }
+
 
 
 @app.get("/assets/{path:path}")
