@@ -1,0 +1,87 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  backend:
+    name: Backend (Python)
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: dashboard/backend/requirements.txt
+
+      - name: Install dependencies
+        run: |
+          cd dashboard/backend
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Verify imports
+        run: |
+          cd dashboard/backend
+          python -c "from main import app; print('Backend imports OK')"
+
+  frontend:
+    name: Frontend (React/TypeScript)
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: dashboard/frontend/package-lock.json
+
+      - name: Install dependencies
+        run: |
+          cd dashboard/frontend
+          npm ci
+
+      - name: TypeScript typecheck
+        run: |
+          cd dashboard/frontend
+          npx tsc --noEmit
+
+      - name: Build
+        run: |
+          cd dashboard/frontend
+          npx vite build
+
+  agent:
+    name: Server Agent (Python)
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: server_agent/requirements.txt
+
+      - name: Install dependencies
+        run: |
+          cd server_agent
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Verify imports
+        run: |
+          cd server_agent
+          python -c "from server_agent import SystemMonitor, ServerAgent; print('Agent imports OK')"
