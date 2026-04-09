@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { LayoutDashboard, Server, Activity as ActivityIcon, Settings as SettingsIcon, GitCompare, Bell, Tag } from 'lucide-react';
+import { LayoutDashboard, Server, Activity as ActivityIcon, Settings as SettingsIcon, GitCompare, Bell, Tag, Layers } from 'lucide-react';
 import ServerList from './pages/ServerList';
 import ServerDetail from './pages/ServerDetail';
 import Settings from './pages/Settings';
@@ -8,6 +8,7 @@ import Compare from './pages/Compare';
 import Alerts from './pages/Alerts';
 import Tags from './pages/Tags';
 import Logs from './pages/Logs';
+import Dashboard from './pages/Dashboard';
 
 function Sidebar() {
   return (
@@ -17,9 +18,13 @@ function Sidebar() {
         <h1>ServerMonitor</h1>
       </div>
       <nav className="nav-menu">
+        <a className="nav-item" href="/dashboard">
+          <Layers size={20} />
+          <span>Dashboard</span>
+        </a>
         <a className="nav-item active" href="/">
           <LayoutDashboard size={20} />
-          <span>Dashboard</span>
+          <span>Servers</span>
         </a>
         <a className="nav-item" href="/servers">
           <Server size={20} />
@@ -67,6 +72,7 @@ function App() {
           <Routes>
             <Route path="/" element={<ServerList />} />
             <Route path="/servers" element={<ServerList />} />
+            <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/server/:id" element={<ServerDetail />} />
             <Route path="/settings" element={<Settings />} />
             <Route path="/activity" element={<Activity />} />

@@ -160,6 +160,70 @@ server_tags_store = ServerTagsStore()
 active_alerts: dict[str, list[dict]] = {}  # server_id -> [alerts]
 
 
+class DashboardStore:
+    """Dashboard configuration storage."""
+    
+    def __init__(self):
+        # Default dashboard layout
+        self.dashboards: dict[str, dict] = {
+            "default": {
+                "name": "Default Dashboard",
+                "widgets": [
+                    {"id": "w1", "type": "server_status", "x": 0, "y": 0, "w": 12, "h": 2},
+                    {"id": "w2", "type": "cpu_gauge", "x": 0, "y": 2, "w": 4, "h": 3},
+                    {"id": "w3", "type": "memory_gauge", "x": 4, "y": 2, "w": 4, "h": 3},
+                    {"id": "w4", "type": "disk_gauge", "x": 8, "y": 2, "w": 4, "h": 3},
+                    {"id": "w5", "type": "network_chart", "x": 0, "y": 5, "w": 6, "h": 4},
+                    {"id": "w6", "type": "cpu_chart", "x": 6, "y": 5, "w": 6, "h": 4},
+                    {"id": "w7", "type": "process_list", "x": 0, "y": 9, "w": 6, "h": 4},
+                    {"id": "w8", "type": "alerts_list", "x": 6, "y": 9, "w": 6, "h": 4},
+                ]
+            }
+        }
+        self.active_dashboard = "default"
+    
+    def get_all_dashboards(self) -> dict[str, dict]:
+        return self.dashboards.copy()
+    
+    def get_dashboard(self, name: str) -> Optional[dict]:
+        return self.dashboards.get(name)
+    
+    def create_dashboard(self, name: str, widgets: list[dict]) -> dict:
+        dashboard_id = name.lower().replace(" ", "-")
+        self.dashboards[dashboard_id] = {
+            "name": name,
+            "widgets": widgets
+        }
+        return self.dashboards[dashboard_id]
+    
+    def update_dashboard(self, dashboard_id: str, name: str, widgets: list[dict]) -> Optional[dict]:
+        if dashboard_id in self.dashboards:
+            self.dashboards[dashboard_id] = {
+                "name": name,
+                "widgets": widgets
+            }
+            return self.dashboards[dashboard_id]
+        return None
+    
+    def delete_dashboard(self, dashboard_id: str) -> bool:
+        if dashboard_id in self.dashboards and dashboard_id != "default":
+            del self.dashboards[dashboard_id]
+            if self.active_dashboard == dashboard_id:
+                self.active_dashboard = "default"
+            return True
+        return False
+    
+    def get_active(self) -> str:
+        return self.active_dashboard
+    
+    def set_active(self, dashboard_id: str):
+        if dashboard_id in self.dashboards:
+            self.active_dashboard = dashboard_id
+
+
+dashboard_store = DashboardStore()
+
+
 class ServerStore:
     """In-memory server data storage."""
     
@@ -520,6 +584,60 @@ async def delete_tag(tag: str):
 async def get_server_tags(server_id: str):
     """Get all tags for a specific server."""
     return {"tags": server_tags_store.get_server_tags(server_id)}
+
+
+# Dashboard endpoints
+@api_router.get("/dashboards")
+async def get_dashboards():
+    """Get all dashboards."""
+    return {
+        "dashboards": dashboard_store.get_all_dashboards(),
+        "active": dashboard_store.get_active()
+    }
+
+
+@api_router.get("/dashboards/{dashboard_id}")
+async def get_dashboard(dashboard_id: str):
+    """Get a specific dashboard."""
+    dashboard = dashboard_store.get_dashboard(dashboard_id)
+    if not dashboard:
+        raise HTTPException(status_code=404, detail="Dashboard not found")
+    return dashboard
+
+
+@api_router.post("/dashboards")
+async def create_dashboard(data: dict):
+    """Create a new dashboard."""
+    name = data.get("name", "New Dashboard")
+    widgets = data.get("widgets", [])
+    dashboard = dashboard_store.create_dashboard(name, widgets)
+    return {"message": "Dashboard created", "dashboard": dashboard}
+
+
+@api_router.put("/dashboards/{dashboard_id}")
+async def update_dashboard(dashboard_id: str, data: dict):
+    """Update a dashboard."""
+    name = data.get("name", "Untitled")
+    widgets = data.get("widgets", [])
+    dashboard = dashboard_store.update_dashboard(dashboard_id, name, widgets)
+    if not dashboard:
+        raise HTTPException(status_code=404, detail="Dashboard not found")
+    return {"message": "Dashboard updated", "dashboard": dashboard}
+
+
+@api_router.delete("/dashboards/{dashboard_id}")
+async def delete_dashboard(dashboard_id: str):
+    """Delete a dashboard."""
+    if dashboard_store.delete_dashboard(dashboard_id):
+        return {"message": "Dashboard deleted"}
+    raise HTTPException(status_code=400, detail="Cannot delete default dashboard")
+
+
+@api_router.post("/dashboards/{dashboard_id}/activate")
+async def activate_dashboard(dashboard_id: str):
+    """Set active dashboard."""
+    dashboard_store.set_active(dashboard_id)
+    return {"message": "Dashboard activated", "active": dashboard_id}
 
 
 # Log monitoring endpoints
