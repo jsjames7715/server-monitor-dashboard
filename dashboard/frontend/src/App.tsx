@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { LayoutDashboard, Server, Activity as ActivityIcon, Settings as SettingsIcon, GitCompare, Bell, Tag, Layers } from 'lucide-react';
+import { LayoutDashboard, Server, Activity as ActivityIcon, Settings as SettingsIcon, GitCompare, Bell, Tag, Layers, Network, FileStack } from 'lucide-react';
 import ServerList from './pages/ServerList';
 import ServerDetail from './pages/ServerDetail';
 import Settings from './pages/Settings';
@@ -9,6 +9,8 @@ import Alerts from './pages/Alerts';
 import Tags from './pages/Tags';
 import Logs from './pages/Logs';
 import Dashboard from './pages/Dashboard';
+import SNMPDevices from './pages/SNMPDevices';
+import DashboardTemplates from './pages/DashboardTemplates';
 
 function Sidebar() {
   return (
@@ -46,6 +48,14 @@ function Sidebar() {
           <Tag size={20} />
           <span>Groups</span>
         </a>
+        <a className="nav-item" href="/snmp">
+          <Network size={20} />
+          <span>SNMP</span>
+        </a>
+        <a className="nav-item" href="/templates">
+          <FileStack size={20} />
+          <span>Templates</span>
+        </a>
         <a className="nav-item" href="/settings">
           <SettingsIcon size={20} />
           <span>Settings</span>
@@ -80,6 +90,8 @@ function App() {
             <Route path="/alerts" element={<Alerts />} />
             <Route path="/tags" element={<Tags />} />
             <Route path="/server/:id/logs" element={<Logs />} />
+            <Route path="/snmp" element={<SNMPDevices />} />
+            <Route path="/templates" element={<DashboardTemplates />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </main>

@@ -224,6 +224,158 @@ class DashboardStore:
 dashboard_store = DashboardStore()
 
 
+# SNMP/Network Device Store
+class SNMPStore:
+    """SNMP network device storage."""
+    
+    def __init__(self):
+        self.devices: dict[str, dict] = {}
+    
+    def add_device(self, device_id: str, name: str, ip: str, community: str = "public", 
+                   snmp_version: str = "2c", port: int = 161) -> dict:
+        self.devices[device_id] = {
+            "device_id": device_id,
+            "name": name,
+            "ip": ip,
+            "community": community,
+            "snmp_version": snmp_version,
+            "port": port,
+            "status": "unknown",
+            "last_checked": None,
+            "metrics": {}
+        }
+        return self.devices[device_id]
+    
+    def get_device(self, device_id: str) -> Optional[dict]:
+        return self.devices.get(device_id)
+    
+    def get_all_devices(self) -> list[dict]:
+        return list(self.devices.values())
+    
+    def update_device_metrics(self, device_id: str, metrics: dict):
+        if device_id in self.devices:
+            self.devices[device_id]["metrics"] = metrics
+            self.devices[device_id]["status"] = "online"
+            self.devices[device_id]["last_checked"] = datetime.now().isoformat()
+    
+    def set_device_status(self, device_id: str, status: str):
+        if device_id in self.devices:
+            self.devices[device_id]["status"] = status
+    
+    def remove_device(self, device_id: str) -> bool:
+        if device_id in self.devices:
+            del self.devices[device_id]
+            return True
+        return False
+    
+    def update_device(self, device_id: str, updates: dict) -> Optional[dict]:
+        if device_id in self.devices:
+            self.devices[device_id].update(updates)
+            return self.devices[device_id]
+        return None
+
+
+snmp_store = SNMPStore()
+
+
+# Dashboard Template Store
+class DashboardTemplateStore:
+    """Dashboard template storage with variables."""
+    
+    def __init__(self):
+        self.templates: dict[str, dict] = {
+            "server-basic": {
+                "name": "Server Basic",
+                "description": "Basic server monitoring template",
+                "variables": [{"name": "server_id", "label": "Server ID", "type": "server"}],
+                "widgets": [
+                    {"id": "w1", "type": "server_status", "x": 0, "y": 0, "w": 12, "h": 2, "serverIdVar": "server_id"},
+                    {"id": "w2", "type": "cpu_gauge", "x": 0, "y": 2, "w": 4, "h": 3, "serverIdVar": "server_id"},
+                    {"id": "w3", "type": "memory_gauge", "x": 4, "y": 2, "w": 4, "h": 3, "serverIdVar": "server_id"},
+                    {"id": "w4", "type": "disk_gauge", "x": 8, "y": 2, "w": 4, "h": 3, "serverIdVar": "server_id"},
+                ]
+            },
+            "server-full": {
+                "name": "Server Full",
+                "description": "Full server monitoring with network and processes",
+                "variables": [{"name": "server_id", "label": "Server ID", "type": "server"}],
+                "widgets": [
+                    {"id": "w1", "type": "server_status", "x": 0, "y": 0, "w": 12, "h": 2, "serverIdVar": "server_id"},
+                    {"id": "w2", "type": "cpu_gauge", "x": 0, "y": 2, "w": 4, "h": 3, "serverIdVar": "server_id"},
+                    {"id": "w3", "type": "memory_gauge", "x": 4, "y": 2, "w": 4, "h": 3, "serverIdVar": "server_id"},
+                    {"id": "w4", "type": "disk_gauge", "x": 8, "y": 2, "w": 4, "h": 3, "serverIdVar": "server_id"},
+                    {"id": "w5", "type": "network_chart", "x": 0, "y": 5, "w": 6, "h": 4, "serverIdVar": "server_id"},
+                    {"id": "w6", "type": "cpu_chart", "x": 6, "y": 5, "w": 6, "h": 4, "serverIdVar": "server_id"},
+                    {"id": "w7", "type": "process_list", "x": 0, "y": 9, "w": 6, "h": 4, "serverIdVar": "server_id"},
+                    {"id": "w8", "type": "alerts_list", "x": 6, "y": 9, "w": 6, "h": 4},
+                ]
+            },
+            "network-device": {
+                "name": "Network Device",
+                "description": "SNMP network device monitoring template",
+                "variables": [{"name": "device_id", "label": "Device ID", "type": "snmp"}],
+                "widgets": [
+                    {"id": "w1", "type": "network_device_status", "x": 0, "y": 0, "w": 12, "h": 2, "deviceIdVar": "device_id"},
+                    {"id": "w2", "type": "snmp_traffic_chart", "x": 0, "y": 2, "w": 6, "h": 4, "deviceIdVar": "device_id"},
+                    {"id": "w3", "type": "snmp_cpu_chart", "x": 6, "y": 2, "w": 6, "h": 4, "deviceIdVar": "device_id"},
+                    {"id": "w4", "type": "snmp_interfaces", "x": 0, "y": 6, "w": 12, "h": 5, "deviceIdVar": "device_id"},
+                ]
+            }
+        }
+    
+    def get_all_templates(self) -> dict[str, dict]:
+        return self.templates.copy()
+    
+    def get_template(self, template_id: str) -> Optional[dict]:
+        return self.templates.get(template_id)
+    
+    def create_template(self, template_id: str, name: str, description: str, 
+                        variables: list[dict], widgets: list[dict]) -> dict:
+        self.templates[template_id] = {
+            "name": name,
+            "description": description,
+            "variables": variables,
+            "widgets": widgets
+        }
+        return self.templates[template_id]
+    
+    def update_template(self, template_id: str, updates: dict) -> Optional[dict]:
+        if template_id in self.templates:
+            self.templates[template_id].update(updates)
+            return self.templates[template_id]
+        return None
+    
+    def delete_template(self, template_id: str) -> bool:
+        if template_id in self.templates and template_id not in ["server-basic", "server-full", "network-device"]:
+            del self.templates[template_id]
+            return True
+        return False
+    
+    def apply_template(self, template_id: str, variable_values: dict[str, str]) -> list[dict]:
+        """Apply template with variable values to generate widget list."""
+        template = self.templates.get(template_id)
+        if not template:
+            return []
+        
+        widgets = []
+        for widget in template.get("widgets", []):
+            new_widget = widget.copy()
+            # Replace variable placeholders
+            for var in template.get("variables", []):
+                var_name = var.get("name")
+                if var_name in variable_values:
+                    if "serverIdVar" in new_widget and new_widget["serverIdVar"] == var_name:
+                        new_widget["serverId"] = variable_values[var_name]
+                    if "deviceIdVar" in new_widget and new_widget["deviceIdVar"] == var_name:
+                        new_widget["deviceId"] = variable_values[var_name]
+            widgets.append(new_widget)
+        
+        return widgets
+
+
+dashboard_template_store = DashboardTemplateStore()
+
+
 class ServerStore:
     """In-memory server data storage."""
     
@@ -638,6 +790,164 @@ async def activate_dashboard(dashboard_id: str):
     """Set active dashboard."""
     dashboard_store.set_active(dashboard_id)
     return {"message": "Dashboard activated", "active": dashboard_id}
+
+
+# Dashboard Template endpoints
+@api_router.get("/dashboard-templates")
+async def get_templates():
+    """Get all dashboard templates."""
+    return {"templates": dashboard_template_store.get_all_templates()}
+
+
+@api_router.get("/dashboard-templates/{template_id}")
+async def get_template(template_id: str):
+    """Get a specific template."""
+    template = dashboard_template_store.get_template(template_id)
+    if not template:
+        raise HTTPException(status_code=404, detail="Template not found")
+    return template
+
+
+@api_router.post("/dashboard-templates/{template_id}/apply")
+async def apply_template(template_id: str, variables: dict):
+    """Apply a template with variable values."""
+    widgets = dashboard_template_store.apply_template(template_id, variables)
+    return {"widgets": widgets}
+
+
+@api_router.post("/dashboard-templates")
+async def create_template(data: dict):
+    """Create a new dashboard template."""
+    template_id = data.get("id") or data.get("name", "").lower().replace(" ", "-")
+    name = data.get("name", "New Template")
+    description = data.get("description", "")
+    variables = data.get("variables", [])
+    widgets = data.get("widgets", [])
+    
+    template = dashboard_template_store.create_template(template_id, name, description, variables, widgets)
+    return {"message": "Template created", "template": template}
+
+
+@api_router.delete("/dashboard-templates/{template_id}")
+async def delete_template(template_id: str):
+    """Delete a dashboard template."""
+    if dashboard_template_store.delete_template(template_id):
+        return {"message": "Template deleted"}
+    raise HTTPException(status_code=400, detail="Cannot delete built-in templates")
+
+
+# SNMP/Network Device endpoints
+@api_router.get("/snmp/devices")
+async def get_snmp_devices():
+    """Get all SNMP devices."""
+    return {"devices": snmp_store.get_all_devices()}
+
+
+@api_router.get("/snmp/devices/{device_id}")
+async def get_snmp_device(device_id: str):
+    """Get a specific SNMP device."""
+    device = snmp_store.get_device(device_id)
+    if not device:
+        raise HTTPException(status_code=404, detail="Device not found")
+    return device
+
+
+@api_router.post("/snmp/devices")
+async def add_snmp_device(data: dict):
+    """Add a new SNMP device."""
+    device_id = data.get("device_id") or data.get("name", "").lower().replace(" ", "-")
+    name = data.get("name", "New Device")
+    ip = data.get("ip")
+    
+    if not ip:
+        raise HTTPException(status_code=400, detail="IP address required")
+    
+    community = data.get("community", "public")
+    snmp_version = data.get("snmp_version", "2c")
+    port = data.get("port", 161)
+    
+    device = snmp_store.add_device(device_id, name, ip, community, snmp_version, port)
+    return {"message": "Device added", "device": device}
+
+
+@api_router.put("/snmp/devices/{device_id}")
+async def update_snmp_device(device_id: str, data: dict):
+    """Update an SNMP device."""
+    device = snmp_store.update_device(device_id, data)
+    if not device:
+        raise HTTPException(status_code=404, detail="Device not found")
+    return {"message": "Device updated", "device": device}
+
+
+@api_router.delete("/snmp/devices/{device_id}")
+async def delete_snmp_device(device_id: str):
+    """Delete an SNMP device."""
+    if snmp_store.remove_device(device_id):
+        return {"message": "Device deleted"}
+    raise HTTPException(status_code=404, detail="Device not found")
+
+
+@api_router.post("/snmp/devices/{device_id}/poll")
+async def poll_snmp_device(device_id: str):
+    """Poll SNMP device for metrics (simulated - requires pysnmp)."""
+    device = snmp_store.get_device(device_id)
+    if not device:
+        raise HTTPException(status_code=404, detail="Device not found")
+    
+    # Try to import pysnmp for real SNMP polling
+    try:
+        from pysnmp.hlapi import *
+        
+        # Basic SNMP polling - get system info
+        iterator = getCmd(
+            SnmpEngine(),
+            CommunityData(device.get("community", "public"), mpModel=1),  # v2c
+            UdpTransportTarget((device["ip"], device.get("port", 161)), timeout=2, retries=1),
+            ContextData(),
+            ObjectType(ObjectIdentity('1.3.6.1.2.1.1.1.0')),  # sysDescr
+            ObjectType(ObjectIdentity('1.3.6.1.2.1.1.3.0')),  # sysUpTime
+            ObjectType(ObjectIdentity('1.3.6.1.2.1.1.5.0')),  # sysName
+        )
+        
+        errorIndication, errorStatus, errorIndex, varBinds = next(iterator)
+        
+        if errorIndication:
+            snmp_store.set_device_status(device_id, "error")
+            return {"error": str(errorIndication)}
+        
+        # Parse response
+        metrics = {}
+        for varBind in varBinds:
+            metrics[str(varBind[0])] = str(varBind[1])
+        
+        snmp_store.update_device_metrics(device_id, metrics)
+        return {"message": "Device polled", "metrics": metrics}
+        
+    except ImportError:
+        # Simulate metrics if pysnmp not available
+        snmp_store.update_device_metrics(device_id, {
+            "simulated": True,
+            "sysDescr": "Network Device (simulated)",
+            "sysUpTime": "123456789",
+            "ifNumber": 4,
+            "ifInOctets": 1234567890,
+            "ifOutOctets": 987654321,
+            "cpu": 25 + (device_id.__hash__() % 30),
+            "memory": 40 + (device_id.__hash__() % 20)
+        })
+        return {"message": "Device polled (simulated)", "simulated": True}
+    except Exception as e:
+        snmp_store.set_device_status(device_id, "error")
+        return {"error": str(e)}
+
+
+@api_router.get("/snmp/devices/{device_id}/metrics")
+async def get_snmp_device_metrics(device_id: str):
+    """Get metrics for an SNMP device."""
+    device = snmp_store.get_device(device_id)
+    if not device:
+        raise HTTPException(status_code=404, detail="Device not found")
+    return {"metrics": device.get("metrics", {}), "status": device.get("status")}
 
 
 # Log monitoring endpoints
