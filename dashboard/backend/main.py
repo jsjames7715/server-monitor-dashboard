@@ -18,6 +18,32 @@ from pydantic import BaseModel
 
 
 # Data storage
+class SettingsStore:
+    """Settings storage."""
+    
+    def __init__(self):
+        self.settings: dict[str, Any] = {
+            "metricsHistoryLimit": 100,
+            "offlineTimeoutSeconds": 60,
+            "refreshInterval": 3,
+        }
+    
+    def get(self, key: str, default: Any = None) -> Any:
+        return self.settings.get(key, default)
+    
+    def set(self, key: str, value: Any):
+        self.settings[key] = value
+    
+    def get_all(self) -> dict:
+        return self.settings.copy()
+    
+    def update(self, updates: dict):
+        self.settings.update(updates)
+
+
+settings_store = SettingsStore()
+
+
 class ServerStore:
     """In-memory server data storage."""
     
@@ -50,13 +76,14 @@ class ServerStore:
             self.servers[server_id]["current_metrics"] = metrics
             self.servers[server_id]["status"] = "online"
             
-            # Keep history
+            # Keep history - use configurable limit
             self.metrics_history[server_id].append({
                 "timestamp": datetime.now().isoformat(),
                 "metrics": metrics
             })
-            if len(self.metrics_history[server_id]) > 100:
-                self.metrics_history[server_id] = self.metrics_history[server_id][-100:]
+            limit = settings_store.get("metricsHistoryLimit", 100)
+            if len(self.metrics_history[server_id]) > limit:
+                self.metrics_history[server_id] = self.metrics_history[server_id][-limit:]
     
     def get_server(self, server_id: str) -> Optional[dict]:
         """Get server by ID."""
@@ -289,10 +316,17 @@ async def kill_process(server_id: str, pid: int):
     return {"message": "Kill command sent", "command_id": command_id, "pid": pid}
 
 
+@api_router.get("/settings")
+async def get_settings():
+    """Get dashboard settings."""
+    return settings_store.get_all()
 
 
-
-
+@api_router.put("/settings")
+async def update_settings(updates: dict):
+    """Update dashboard settings."""
+    settings_store.update(updates)
+    return {"message": "Settings updated", "settings": settings_store.get_all()}
 
 
 # Frontend static files
