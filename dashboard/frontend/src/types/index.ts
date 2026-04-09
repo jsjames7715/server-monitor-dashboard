@@ -118,3 +118,27 @@ export interface FileInfo {
   isdir: boolean;
   modified: string;
 }
+
+export interface AlertThreshold {
+  cpuPercent: number;
+  memoryPercent: number;
+  diskPercent: number;
+  gpuTemp: number;
+  cpuTemp: number;
+  enabled: boolean;
+}
+
+export interface Alert {
+  type: string;
+  severity: 'warning' | 'critical';
+  message: string;
+  value: number;
+  threshold: number;
+  mountpoint?: string;
+  label?: string;
+}
+
+export interface ServerTag {
+  name: string;
+  serverIds: string[];
+}

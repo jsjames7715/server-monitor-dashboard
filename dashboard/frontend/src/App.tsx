@@ -1,9 +1,12 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { LayoutDashboard, Server, Activity as ActivityIcon, Settings as SettingsIcon } from 'lucide-react';
+import { LayoutDashboard, Server, Activity as ActivityIcon, Settings as SettingsIcon, GitCompare, Bell, Tag } from 'lucide-react';
 import ServerList from './pages/ServerList';
 import ServerDetail from './pages/ServerDetail';
 import Settings from './pages/Settings';
 import Activity from './pages/Activity';
+import Compare from './pages/Compare';
+import Alerts from './pages/Alerts';
+import Tags from './pages/Tags';
 
 function Sidebar() {
   return (
@@ -25,6 +28,18 @@ function Sidebar() {
           <ActivityIcon size={20} />
           <span>Activity</span>
         </a>
+        <a className="nav-item" href="/compare">
+          <GitCompare size={20} />
+          <span>Compare</span>
+        </a>
+        <a className="nav-item" href="/alerts">
+          <Bell size={20} />
+          <span>Alerts</span>
+        </a>
+        <a className="nav-item" href="/tags">
+          <Tag size={20} />
+          <span>Groups</span>
+        </a>
         <a className="nav-item" href="/settings">
           <SettingsIcon size={20} />
           <span>Settings</span>
@@ -35,7 +50,7 @@ function Sidebar() {
           Server Monitor Dashboard
         </div>
         <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
-          v1.0.0
+          v1.1.0
         </div>
       </div>
     </aside>
@@ -54,6 +69,9 @@ function App() {
             <Route path="/server/:id" element={<ServerDetail />} />
             <Route path="/settings" element={<Settings />} />
             <Route path="/activity" element={<Activity />} />
+            <Route path="/compare" element={<Compare />} />
+            <Route path="/alerts" element={<Alerts />} />
+            <Route path="/tags" element={<Tags />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </main>

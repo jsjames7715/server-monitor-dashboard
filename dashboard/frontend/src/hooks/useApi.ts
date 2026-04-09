@@ -54,5 +54,24 @@ export function useApi() {
     }
   }, []);
 
-  return { get, post, del, loading, error };
+  const put = useCallback(async <T>(path: string, body?: unknown): Promise<T | null> => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await fetch(`${API_BASE}${path}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: body ? JSON.stringify(body) : undefined,
+      });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      return await response.json();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Unknown error');
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  return { get, post, del, put, loading, error };
 }
