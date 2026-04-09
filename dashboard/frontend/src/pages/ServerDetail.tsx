@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import {
   Cpu, MemoryStick, HardDrive, Network, Thermometer, Activity,
   Package, Folder, Power, RefreshCw, Trash2, ArrowLeft,
-  Terminal
+  Terminal, FileText
 } from 'lucide-react';
 import {
   LineChart, Line, AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer
@@ -178,7 +178,10 @@ export default function ServerDetail() {
           <Package size={16} style={{ marginRight: 8 }} />
           Processes
         </button>
-
+        <button className={`tab ${activeTab === 'logs' ? 'active' : ''}`} onClick={() => navigate(`/server/${id}/logs`)}>
+          <FileText size={16} style={{ marginRight: 8 }} />
+          Logs
+        </button>
       </div>
 
       {/* Metrics Tab */}

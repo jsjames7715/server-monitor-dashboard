@@ -47,6 +47,169 @@ except ImportError:
         print("Could not install websocket-client - WebSocket will be disabled")
 
 
+class LogMonitor:
+    """Monitors log files for patterns and alerts."""
+    
+    def __init__(self):
+        self.log_configs: dict[str, dict] = {}  # config_name -> config
+        self.file_positions: dict[str, int] = {}  # file_path -> last position
+        self.match_counts: dict[str, int] = {}  # config_name -> match count in interval
+    
+    def add_log_config(self, name: str, file_path: str, pattern: str = ".*", 
+                       tail: bool = True, max_entries: int = 100):
+        """Add a log file configuration."""
+        import re
+        try:
+            compiled_regex = re.compile(pattern)
+        except re.error:
+            compiled_regex = re.compile(".*")  # Fallback to match all
+        
+        self.log_configs[name] = {
+            "file_path": file_path,
+            "pattern": pattern,
+            "regex": compiled_regex,
+            "tail": tail,
+            "max_entries": max_entries,
+            "enabled": True
+        }
+        
+        # Initialize position based on tail setting
+        if file_path in self.file_positions:
+            pass  # Keep existing position
+        elif tail and os.path.exists(file_path):
+            # Start from end for tail mode
+            self.file_positions[file_path] = os.path.getsize(file_path)
+        else:
+            self.file_positions[file_path] = 0
+    
+    def remove_log_config(self, name: str):
+        """Remove a log configuration."""
+        if name in self.log_configs:
+            del self.log_configs[name]
+        if name in self.match_counts:
+            del self.match_counts[name]
+    
+    def check_logs(self) -> dict:
+        """Check all configured log files for new entries."""
+        results = {}
+        
+        for name, config in self.log_configs.items():
+            if not config.get("enabled", True):
+                continue
+            
+            file_path = config["file_path"]
+            regex = config["regex"]
+            max_entries = config["max_entries"]
+            
+            if not os.path.exists(file_path):
+                results[name] = {
+                    "error": "File not found",
+                    "entries": []
+                }
+                continue
+            
+            try:
+                current_size = os.path.getsize(file_path)
+                last_pos = self.file_positions.get(file_path, 0)
+                
+                # Handle log rotation (file shrunk)
+                if current_size < last_pos:
+                    last_pos = 0
+                
+                # Read new content
+                with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
+                    f.seek(last_pos)
+                    new_lines = f.readlines()
+                    self.file_positions[file_path] = f.tell()
+                
+                # Parse matching entries
+                entries = []
+                match_count = 0
+                
+                for line in new_lines:
+                    line = line.rstrip('\n\r')
+                    match = regex.search(line)
+                    
+                    if match:
+                        match_count += 1
+                        # Extract timestamp if present (common formats)
+                        timestamp = self._extract_timestamp(line)
+                        entries.append({
+                            "timestamp": timestamp,
+                            "message": line,
+                            "matched": True
+                        })
+                    else:
+                        entries.append({
+                            "timestamp": None,
+                            "message": line,
+                            "matched": False
+                        })
+                
+                # Keep only last max_entries
+                entries = entries[-max_entries:]
+                
+                # Update match count for alerting (reset each interval)
+                prev_count = self.match_counts.get(name, 0)
+                self.match_counts[name] = prev_count + match_count if prev_count > 0 else match_count
+                
+                results[name] = {
+                    "entries": entries,
+                    "new_entries": len(new_lines),
+                    "matches": match_count,
+                    "error": None
+                }
+                
+            except Exception as e:
+                results[name] = {
+                    "error": str(e),
+                    "entries": []
+                }
+        
+        return results
+    
+    def _extract_timestamp(self, line: str) -> Optional[str]:
+        """Extract timestamp from log line."""
+        import re
+        
+        # Common timestamp patterns
+        patterns = [
+            r'(\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}:\d{2})',  # ISO format
+            r'(\w{3} \d{1,2} \d{2}:\d{2}:\d{2})',  # Syslog
+            r'(\d{2}/\w{3}/\d{4}:\d{2}:\d{2}:\d{2})',  # Apache
+            r'(\d{2}-\d{2}-\d{4} \d{2}:\d{2}:\d{2})',  # Windows
+        ]
+        
+        for pattern in patterns:
+            match = re.search(pattern, line)
+            if match:
+                return match.group(1)
+        
+        return None
+    
+    def get_match_count(self, name: str) -> int:
+        """Get match count for a config in last interval."""
+        return self.match_counts.get(name, 0)
+    
+    def get_configs(self) -> list:
+        """Get list of configured log monitors."""
+        return [
+            {
+                "name": name,
+                "file_path": config["file_path"],
+                "pattern": config["pattern"],
+                "tail": config["tail"],
+                "enabled": config.get("enabled", True)
+            }
+            for name, config in self.log_configs.items()
+        ]
+    
+    def toggle_config(self, name: str, enabled: bool):
+        """Enable or disable a log config."""
+        if name in self.log_configs:
+            self.log_configs[name]["enabled"] = enabled
+
+
 class SystemMonitor:
     """Collects system metrics."""
     
@@ -54,6 +217,7 @@ class SystemMonitor:
         self._prev_net_io = None
         self._prev_disk_io = None
         self._prev_time = None
+        self.log_monitor = LogMonitor()
     
     def get_cpu_usage(self) -> dict:
         """Get CPU usage metrics."""
@@ -277,7 +441,8 @@ class SystemMonitor:
             "gpu": self.get_gpu_usage(),
             "temperature": self.get_temperature(),
             "processes": self.get_processes(),
-            "system": self.get_system_info()
+            "system": self.get_system_info(),
+            "logs": self.log_monitor.check_logs()
         }
 
 
@@ -299,6 +464,10 @@ class ServerAgent:
             "kill": self._handle_kill,
             "ping": self._handle_ping,
             "get_processes": self._handle_get_processes,
+            "add_log": self._handle_add_log,
+            "remove_log": self._handle_remove_log,
+            "get_logs": self._handle_get_logs,
+            "toggle_log": self._handle_toggle_log,
         }
     
     def _send_http_metrics(self, metrics: dict) -> bool:
@@ -417,6 +586,48 @@ class ServerAgent:
         """Handle get processes command."""
         limit = command.get("limit", 100)
         return {"success": True, "processes": self.monitor.get_processes(limit)}
+    
+    def _handle_add_log(self, command: dict) -> dict:
+        """Handle add log monitoring command."""
+        name = command.get("name")
+        file_path = command.get("file_path")
+        pattern = command.get("pattern", ".*")
+        tail = command.get("tail", True)
+        max_entries = command.get("max_entries", 100)
+        
+        if not name or not file_path:
+            return {"success": False, "error": "name and file_path required"}
+        
+        self.monitor.log_monitor.add_log_config(name, file_path, pattern, tail, max_entries)
+        return {"success": True, "message": f"Log monitoring added: {name}"}
+    
+    def _handle_remove_log(self, command: dict) -> dict:
+        """Handle remove log monitoring command."""
+        name = command.get("name")
+        if not name:
+            return {"success": False, "error": "name required"}
+        
+        self.monitor.log_monitor.remove_log_config(name)
+        return {"success": True, "message": f"Log monitoring removed: {name}"}
+    
+    def _handle_get_logs(self, command: dict) -> dict:
+        """Handle get log configs command."""
+        return {
+            "success": True,
+            "configs": self.monitor.log_monitor.get_configs(),
+            "logs": self.monitor.log_monitor.check_logs()
+        }
+    
+    def _handle_toggle_log(self, command: dict) -> dict:
+        """Handle toggle log monitoring command."""
+        name = command.get("name")
+        enabled = command.get("enabled", True)
+        
+        if not name:
+            return {"success": False, "error": "name required"}
+        
+        self.monitor.log_monitor.toggle_config(name, enabled)
+        return {"success": True, "message": f"Log monitoring {name} {'enabled' if enabled else 'disabled'}"}
     
     def start(self):
         """Start the agent."""

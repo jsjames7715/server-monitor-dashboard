@@ -522,6 +522,59 @@ async def get_server_tags(server_id: str):
     return {"tags": server_tags_store.get_server_tags(server_id)}
 
 
+# Log monitoring endpoints
+@api_router.get("/servers/{server_id}/logs")
+async def get_server_logs(server_id: str):
+    """Get log monitoring data for a server."""
+    server = store.get_server(server_id)
+    if not server:
+        raise HTTPException(status_code=404, detail="Server not found")
+    
+    metrics = server.get("current_metrics", {})
+    logs = metrics.get("logs", {})
+    return {"logs": logs}
+
+
+@api_router.post("/servers/{server_id}/logs")
+async def add_log_monitor(server_id: str, config: dict):
+    """Add a log file to monitor."""
+    server = store.get_server(server_id)
+    if not server:
+        raise HTTPException(status_code=404, detail="Server not found")
+    
+    command_id = f"log_add_{datetime.now().timestamp()}"
+    message = {
+        "type": "add_log",
+        "id": command_id,
+        "name": config.get("name"),
+        "file_path": config.get("file_path"),
+        "pattern": config.get("pattern", ".*"),
+        "tail": config.get("tail", True),
+        "max_entries": config.get("max_entries", 100)
+    }
+    
+    await store.broadcast_to_server(server_id, message)
+    return {"message": "Log monitor added", "command_id": command_id}
+
+
+@api_router.delete("/servers/{server_id}/logs/{log_name}")
+async def remove_log_monitor(server_id: str, log_name: str):
+    """Remove a log file monitor."""
+    server = store.get_server(server_id)
+    if not server:
+        raise HTTPException(status_code=404, detail="Server not found")
+    
+    command_id = f"log_remove_{datetime.now().timestamp()}"
+    message = {
+        "type": "remove_log",
+        "id": command_id,
+        "name": log_name
+    }
+    
+    await store.broadcast_to_server(server_id, message)
+    return {"message": "Log monitor removed", "command_id": command_id}
+
+
 # Metrics export endpoint
 @api_router.get("/export/{server_id}")
 async def export_metrics_csv(server_id: str, format: str = "csv", limit: int = 100):

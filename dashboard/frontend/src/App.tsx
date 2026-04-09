@@ -7,6 +7,7 @@ import Activity from './pages/Activity';
 import Compare from './pages/Compare';
 import Alerts from './pages/Alerts';
 import Tags from './pages/Tags';
+import Logs from './pages/Logs';
 
 function Sidebar() {
   return (
@@ -72,6 +73,7 @@ function App() {
             <Route path="/compare" element={<Compare />} />
             <Route path="/alerts" element={<Alerts />} />
             <Route path="/tags" element={<Tags />} />
+            <Route path="/server/:id/logs" element={<Logs />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </main>
